@@ -51,8 +51,8 @@ cloudvault/
 ├─ config.js                         Gitignored — your real credentials
 ├─ .gitignore
 ├─ storage-isolation-policies.sql    RLS policies + setup notes
-├─ CHANGES                           Full revision history
-└─ DOCUMENTATION.md                  Deep-dive architecture & security docs
+├─LICENSE
+
 ```
 
 ## Security Model
@@ -66,3 +66,4 @@ See **[DOCUMENTATION.md](./DOCUMENTATION.md)** for the full architecture write-u
 ## License
 
 Add a license of your choice (MIT is a common default for a personal/portfolio project like this) — none is included yet.
+
