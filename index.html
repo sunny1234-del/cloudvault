@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudVault — Secure Cloud Storage</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- Full-screen drag & drop overlay -->
+  <div id="global-drag-overlay" class="drag-overlay-hidden">
+    <div class="drag-overlay-box">
+      <svg class="dial-spin" width="72" height="72" viewBox="0 0 72 72" fill="none">
+        <circle cx="36" cy="36" r="32" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 6"/>
+        <circle cx="36" cy="36" r="20" stroke="var(--accent)" stroke-width="1.5" opacity="0.5"/>
+        <circle cx="36" cy="8" r="2.5" fill="var(--accent)"/>
+      </svg>
+      <h2>Drop to upload</h2>
+      <p>Files are streamed straight into this folder, end‑to‑end encrypted.</p>
+    </div>
+  </div>
+
+  <!-- Toast stack -->
+  <div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+
+  <!-- AUTH SCREEN -->
+  <div class="auth-container" id="auth-container">
+    <div class="auth-backdrop" aria-hidden="true">
+      <svg width="100%" height="100%" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice">
+        <circle cx="400" cy="400" r="260" stroke="#c9a15a" stroke-opacity="0.08" stroke-width="1" fill="none"/>
+        <circle cx="400" cy="400" r="340" stroke="#c9a15a" stroke-opacity="0.05" stroke-width="1" fill="none"/>
+        <circle cx="400" cy="400" r="180" stroke="#c9a15a" stroke-opacity="0.1" stroke-width="1" fill="none"/>
+      </svg>
+    </div>
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="vault-mark" aria-hidden="true">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="18" stroke="#c9a15a" stroke-width="1.5"/>
+            <circle cx="20" cy="20" r="11" stroke="#c9a15a" stroke-width="1.5"/>
+            <circle cx="20" cy="20" r="3" fill="#c9a15a"/>
+            <circle cx="20" cy="4.5" r="1.6" fill="#c9a15a"/>
+          </svg>
+        </div>
+        <h1>CloudVault</h1>
+        <p>Enterprise‑grade, end‑to‑end encrypted storage</p>
+      </div>
+      <div class="auth-tabs" role="tablist">
+        <button id="tab-login" class="auth-tab active" role="tab" aria-selected="true">Sign In</button>
+        <button id="tab-signup" class="auth-tab" role="tab" aria-selected="false">Create Account</button>
+      </div>
+      <form id="auth-form" class="auth-form" novalidate>
+        <div class="form-group">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" autocomplete="email" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" autocomplete="current-password" required>
+        </div>
+        <button type="submit" id="submit-btn" class="btn-primary">
+          <span id="submit-btn-label">Unlock Vault</span>
+        </button>
+        <p id="auth-error" class="auth-error" hidden></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard-container" class="dashboard-hidden application-shell">
+
+    <div id="sidebar-scrim" class="sidebar-scrim"></div>
+
+    <aside class="app-sidebar" id="app-sidebar">
+      <div class="sidebar-brand">
+        <svg width="26" height="26" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <circle cx="20" cy="20" r="18" stroke="#c9a15a" stroke-width="1.8"/>
+          <circle cx="20" cy="20" r="11" stroke="#c9a15a" stroke-width="1.8"/>
+          <circle cx="20" cy="20" r="3" fill="#c9a15a"/>
+        </svg>
+        <h3>CloudVault <span class="badge">v3</span></h3>
+        <button id="sidebar-close" class="sidebar-close" aria-label="Close menu">✕</button>
+      </div>
+
+      <nav class="sidebar-menu">
+        <button class="nav-item active" id="menu-dashboard" data-view="active">
+          <span class="nav-icon">◧</span> Dashboard
+        </button>
+        <button class="nav-item" id="menu-files" data-view="active">
+          <span class="nav-icon">▤</span> My Files
+        </button>
+        <button class="nav-item" id="menu-favorites" data-view="favorites">
+          <span class="nav-icon">★</span> Favorites
+        </button>
+        <button class="nav-item" id="menu-shared" data-view="shared">
+          <span class="nav-icon">⇢</span> Shared
+        </button>
+        <button class="nav-item" id="menu-trash" data-view="trash">
+          <span class="nav-icon">⌫</span> Trash Bin
+        </button>
+        <div class="menu-divider"></div>
+        <button class="nav-item" id="menu-settings" data-view="settings">
+          <span class="nav-icon">⚙</span> Settings
+        </button>
+      </nav>
+
+      <div class="sidebar-storage-widget">
+        <div class="storage-widget-header">
+          <span>Vault capacity</span>
+          <span id="widget-percentage">0.0%</span>
+        </div>
+        <div class="progress-bar-track">
+          <div id="widget-progress-fill" class="progress-bar-fill" style="width: 0.2%"></div>
+        </div>
+        <div class="storage-widget-footer">
+          <span id="widget-used-space">0 KB</span> <span class="text-muted">of 998 MB</span>
+        </div>
+      </div>
+    </aside>
+
+    <div class="app-viewport" id="app-viewport" data-active-view="files">
+
+      <header class="app-header">
+        <button id="sidebar-open" class="icon-btn sidebar-open" aria-label="Open menu">☰</button>
+
+        <div class="greeting-block">
+          <h2 id="dashboard-greeting-text">Welcome back</h2>
+          <p>Infrastructure secure · all systems nominal</p>
+        </div>
+
+        <div class="header-search-wrapper">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input type="text" id="search-input" placeholder="Search your vault…">
+          <kbd class="search-kbd">Ctrl K</kbd>
+        </div>
+
+        <div class="user-profile-dropdown">
+          <div class="avatar-trigger">
+            <div class="avatar-circle" id="avatar-initials">·</div>
+            <div class="profile-meta">
+              <span class="profile-name" id="header-profile-name">Vault Owner</span>
+              <span id="user-display-email" class="profile-email">—</span>
+            </div>
+          </div>
+          <button id="signout-btn" class="btn-signout-outline">Sign Out</button>
+        </div>
+      </header>
+
+      <section class="stats-matrix-grid">
+        <div class="stat-card">
+          <div class="stat-icon icon-brass">▤</div>
+          <div class="stat-data">
+            <h5 class="stat-title">Total Files</h5>
+            <h3 id="stat-files-count" class="stat-value">0</h3>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-teal">◒</div>
+          <div class="stat-data">
+            <h5 class="stat-title">Cloud Usage</h5>
+            <h3 id="stat-total-space" class="stat-value">0 KB</h3>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon icon-slate">◇</div>
+          <div class="stat-data">
+            <h5 class="stat-title">Available</h5>
+            <h3 class="stat-value">998 MB</h3>
+          </div>
+        </div>
+        <div class="stat-card" id="security-stat-card">
+          <div class="stat-icon icon-teal">⚿</div>
+          <div class="stat-data">
+            <h5 class="stat-title">Encryption</h5>
+            <h3 class="stat-value stat-value-mono">AES‑256</h3>
+          </div>
+        </div>
+      </section>
+
+      <div class="workspace-layout-split">
+
+        <main class="workspace-browser-column">
+          <div class="view-control-bar">
+            <div class="context-title-block" id="current-view-title"></div>
+
+            <div class="breadcrumbs-trail" id="breadcrumbs-trail">
+              <span class="breadcrumb-root" id="breadcrumb-root">Root</span>
+            </div>
+
+            <div class="toolbar-row">
+              <button id="create-folder-btn" class="action-btn action-btn-download">
+                + New Folder
+              </button>
+
+              <div class="layout-toggle-pill">
+                <button id="toggle-grid-btn" class="layout-btn active" aria-label="Grid view">▦ Grid</button>
+                <button id="toggle-list-btn" class="layout-btn" aria-label="List view">☰ List</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="files-grid" class="files-grid-canvas"></div>
+          <div id="empty-state" class="empty-state" hidden>
+            <div class="empty-state-icon">◇</div>
+            <h4 id="empty-state-title">Nothing here yet</h4>
+            <p id="empty-state-body">Drag files in, or use the upload panel to get started.</p>
+          </div>
+        </main>
+
+        <aside class="workspace-side-column">
+          <div class="drop-zone-card">
+            <div class="drop-zone" id="drop-zone-click">
+              <div class="upload-bounce-icon" id="upload-icon">⇧</div>
+              <h4>Stream files to cloud</h4>
+              <p>Drag &amp; drop, or click to browse</p>
+              <input type="file" id="file-input" multiple hidden>
+            </div>
+          </div>
+
+          <div class="activity-feed-panel">
+            <h4>Operational Log</h4>
+            <div class="activity-list" id="activity-logger-list">
+              <div class="activity-log-item">
+                <span class="log-dot dot-teal"></span>
+                <div class="log-details">
+                  <p>System cluster listening securely…</p>
+                  <small>Just now</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="chart-analytics-card">
+            <h4>File Distribution</h4>
+            <div class="chart-canvas-wrapper">
+              <canvas id="storageChart"></canvas>
+            </div>
+            <div class="distribution-subtext-grid">
+              <div class="dist-row"><span class="dist-dot dist-dot-blue"></span>Images <span id="dist-count-images">0</span></div>
+              <div class="dist-row"><span class="dist-dot dist-dot-teal"></span>Documents <span id="dist-count-docs">0</span></div>
+              <div class="dist-row"><span class="dist-dot dist-dot-slate"></span>Other <span id="dist-count-others">0</span></div>
+            </div>
+          </div>
+        </aside>
+
+      </div>
+
+      <div id="settings-view" class="settings-layout-split workspace-panel-hidden">
+
+        <section class="settings-prefs-column">
+
+          <div class="settings-card">
+            <h4>🔒 Security</h4>
+
+            <div class="settings-row">
+              <span>Change Password</span>
+              <button class="settings-btn" id="change-password-btn">Update</button>
+            </div>
+
+            <div class="settings-row">
+              <span>Two-Factor Authentication (2FA)</span>
+              <label class="switch">
+                <input type="checkbox" id="toggle-2fa-input">
+                <span class="switch-slider"></span>
+              </label>
+            </div>
+
+            <div class="settings-row">
+              <span>Login Activity</span>
+              <button class="settings-btn" id="login-activity-btn">View</button>
+            </div>
+            <div id="login-activity-panel" class="settings-subpanel" hidden></div>
+
+            <div class="settings-row">
+              <span>Active Devices</span>
+              <button class="settings-btn" id="active-devices-btn">Manage</button>
+            </div>
+
+            <div class="settings-row settings-row-danger">
+              <span>Logout From All Devices</span>
+              <button class="settings-btn settings-btn-danger" id="logout-all-btn">Logout All</button>
+            </div>
+          </div>
+
+          <div class="settings-card">
+            <h4>🌙 Theme</h4>
+            <div class="settings-radio-group" id="theme-radio-group">
+              <label><input type="radio" name="theme" value="light"> Light</label>
+              <label><input type="radio" name="theme" value="dark" checked> Dark</label>
+              <label><input type="radio" name="theme" value="system"> System</label>
+            </div>
+
+            <p class="settings-subtitle">Primary Color</p>
+            <div class="color-swatch-row" id="color-swatch-row">
+              <button type="button" class="color-swatch active" data-color="blue" style="background:#6c93c9;" aria-label="Blue"></button>
+              <button type="button" class="color-swatch" data-color="purple" style="background:#9b7bc9;" aria-label="Purple"></button>
+              <button type="button" class="color-swatch" data-color="green" style="background:#5fae86;" aria-label="Green"></button>
+            </div>
+
+            <p class="settings-subtitle">Font Size</p>
+            <div class="segmented-control" id="font-size-control">
+              <button type="button" data-size="small">Small</button>
+              <button type="button" data-size="medium" class="active">Medium</button>
+              <button type="button" data-size="large">Large</button>
+            </div>
+          </div>
+
+        </section>
+
+        <aside class="settings-profile-column">
+
+          <div class="settings-card profile-card">
+            <div class="profile-header-block">
+              <div class="profile-avatar-wrap" id="profile-avatar-wrap" title="Change photo">
+                <div class="profile-avatar-preview" id="profile-avatar-preview">·</div>
+                <div class="profile-avatar-overlay">
+                  <span class="overlay-icon">⇧</span>
+                  <small>Change</small>
+                </div>
+                <input type="file" id="avatar-file-input" accept="image/*" hidden>
+              </div>
+              <div class="profile-header-meta">
+                <h5 id="profile-display-name">Vault Owner</h5>
+                <p id="profile-display-email">—</p>
+                <button type="button" class="link-btn" id="remove-avatar-btn">Remove photo</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="profile-full-name">Full Name</label>
+              <input type="text" id="profile-full-name" placeholder="Your name">
+            </div>
+
+            <div class="form-group">
+              <label for="profile-email">Email</label>
+              <input type="email" id="profile-email" disabled>
+              <span class="field-hint">Tied to your sign-in — contact support to change it.</span>
+            </div>
+
+            <div class="form-row-split">
+              <div class="form-group">
+                <label for="profile-phone">Phone Number</label>
+                <input type="tel" id="profile-phone" placeholder="+91 00000 00000">
+              </div>
+              <div class="form-group">
+                <label for="profile-username">Username</label>
+                <input type="text" id="profile-username" placeholder="username">
+              </div>
+            </div>
+
+            <button type="button" class="btn-primary" id="save-profile-btn">
+              <span id="save-profile-label">Save Changes</span>
+            </button>
+          </div>
+
+          <div class="settings-card">
+            <h4>Account</h4>
+            <div class="account-info-row"><span>Member since</span><strong id="account-member-since">—</strong></div>
+            <div class="account-info-row"><span>Storage used</span><strong id="account-storage-used">—</strong></div>
+            <p class="settings-subtitle">Tenant ID</p>
+            <code id="tenant-id-display" class="tenant-id-code">—</code>
+            <p class="settings-note">Your files live under this ID in storage — no other account can read or write into it.</p>
+          </div>
+
+        </aside>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- PREVIEW MODAL -->
+  <div id="preview-modal" class="modal-overlay">
+    <div class="modal-card">
+      <button id="close-modal-btn" class="modal-close" aria-label="Close preview">✕</button>
+      <h3 id="preview-title">Document Viewport</h3>
+      <div id="preview-content" class="modal-viewport"></div>
+    </div>
+  </div>
+
+  <button id="floating-upload-fab" class="fab" aria-label="Upload file">+</button>
+
+  <script src="app.js"></script>
+</body>
+</html>
