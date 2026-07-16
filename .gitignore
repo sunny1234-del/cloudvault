@@ -1,0 +1,17 @@
+# Local configuration (real Supabase credentials) — see config.example.js
+# for the template that IS committed.
+config.js
+
+# Local Environment Overrides
+.env
+.env.local
+.env.production
+
+# Editor & OS Metadata
+.DS_Store
+.vscode/
+Thumbs.db
+
+# Runtime/Local Server artifacts
+node_modules/
+.htmlhintrc
