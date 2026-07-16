@@ -640,16 +640,13 @@
         const downloadBtn = actionsWrap.querySelector('.download-btn');
         if (downloadBtn) downloadBtn.addEventListener('click', async () => {
           downloadBtn.textContent = '…';
-          const signedUrl = await getSignedUrlFor(file.name);
-          downloadBtn.textContent = 'Download';
-          if (signedUrl) {
-            const tempLink = document.createElement('a');
-            tempLink.href = signedUrl;
-            tempLink.download = fileRawTitleCleaned;
-            tempLink.rel = 'noopener';
-            document.body.appendChild(tempLink);
-            tempLink.click();
-            tempLink.remove();
+          try {
+            const signedUrl = await getSignedUrlFor(file.name);
+            if (signedUrl) await forceDownload(signedUrl, fileRawTitleCleaned);
+          } catch (err) {
+            showToast(`Download failed: ${err.message}`, 'error');
+          } finally {
+            downloadBtn.textContent = 'Download';
           }
         });
 
@@ -709,6 +706,26 @@
         return null;
       }
       return data.signedUrl;
+    }
+
+    // The `download` attribute on an <a> is silently ignored by browsers once
+    // the URL is cross-origin (which a Supabase signed URL always is) — the
+    // browser just navigates to it instead, opening images/PDFs inline rather
+    // than saving them. Fetching the bytes ourselves and downloading a local
+    // blob: URL (always same-origin) is what actually forces a save-to-disk.
+    async function forceDownload(signedUrl, fileName) {
+      const response = await fetch(signedUrl);
+      if (!response.ok) throw new Error(`Download failed (${response.status})`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const tempLink = document.createElement('a');
+      tempLink.href = blobUrl;
+      tempLink.download = fileName;
+      document.body.appendChild(tempLink);
+      tempLink.click();
+      tempLink.remove();
+      // Give the browser a moment to actually start the save before revoking.
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 4000);
     }
 
     // ---------------------------------------------------------------------

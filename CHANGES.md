@@ -81,6 +81,12 @@ The actual bug: `.form-group`, `label`, and `input` styling in `style.css` were 
 
 Fixed by generalizing the base field styling (`.form-group`, `.form-group label`, `.form-group input`) so it applies everywhere a `.form-group` is used, not just inside `.auth-form`. Scoped it to `.form-group label` specifically (rather than a bare `label` selector) to avoid leaking `text-transform: uppercase` onto unrelated labels like the Light/Dark/System radio options. Also added `min-width: 0` to `.form-group` so the two-column Phone/Username row can shrink properly instead of forcing the grid wider than its container.
 
+## 10. Download opening in-browser instead of saving (fixed)
+
+The `download` attribute on an `<a>` tag is silently ignored by browsers once the URL is cross-origin — and a Supabase signed URL always is, relative to the page. So clicking Download was just navigating to that URL like a normal link, and the browser did what it always does with a navigable image/PDF: display it inline instead of saving it.
+
+Fixed by adding a `forceDownload()` helper that fetches the signed URL's bytes directly (`fetch()` → `blob()`), creates a local `blob:` URL from them (always same-origin, so `download` is respected), clicks a temporary link against that instead, and revokes the blob URL a few seconds later. The Download button now reliably saves to disk regardless of file type.
+
 ## Not changed (by design)
 
 - Supabase project URL, anon key, and bucket name (`vault-files`) — kept identical so this is a drop-in replacement against your existing backend.
