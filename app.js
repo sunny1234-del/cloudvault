@@ -1,9 +1,26 @@
 {
-  const MY_SUPABASE_URL = 'https://yjwzkqdutezumggvwqhg.supabase.co';
-  const MY_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inlqd3prcWR1dGV6dW1nZ3Z3cWhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNTkxOTMsImV4cCI6MjA5NjgzNTE5M30.b96l1o62KBYAuOYVdIKfmREc7jxkU26tTyftcR85YZY';
+  const config = window.CLOUDVAULT_CONFIG;
+  if (!config || !config.SUPABASE_URL || !config.SUPABASE_ANON_KEY) {
+    console.error(
+      'Missing config.js — copy config.example.js to config.js and fill in your Supabase project details.'
+    );
+  }
+  const MY_SUPABASE_URL = config?.SUPABASE_URL;
+  const MY_SUPABASE_ANON_KEY = config?.SUPABASE_ANON_KEY;
 
   if (typeof supabase === 'undefined') {
     console.error('Critical Error: the Supabase CDN script failed to load.');
+  } else if (!MY_SUPABASE_URL || !MY_SUPABASE_ANON_KEY) {
+    // Config missing — surface it in the UI too, not just the console.
+    document.addEventListener('DOMContentLoaded', () => {
+      const authCard = document.querySelector('.auth-card');
+      if (authCard) {
+        authCard.innerHTML = `<div class="auth-error">
+          Missing configuration. Copy <code>config.example.js</code> to <code>config.js</code>,
+          fill in your Supabase URL and anon key, and reload.
+        </div>`;
+      }
+    });
   } else {
     const supabaseClient = supabase.createClient(MY_SUPABASE_URL, MY_SUPABASE_ANON_KEY);
     const BUCKET = 'vault-files';
