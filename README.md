@@ -51,8 +51,9 @@ cloudvault/
 ├─ config.js                         Gitignored — your real credentials
 ├─ .gitignore
 ├─ storage-isolation-policies.sql    RLS policies + setup notes
-├─ CHANGES.md                        Full revision history
-└─ DOCUMENTATION.md                  Deep-dive architecture & security docs
+├─LICENSE
+├─README.md
+
 ```
 
 ## Security Model
