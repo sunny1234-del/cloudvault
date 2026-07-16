@@ -1,6 +1,10 @@
 # Local configuration (real Supabase credentials) — see config.example.js
-# for the template that IS committed.
-config.js
+# for the template. Left un-ignored here because this project deploys to
+# a static host (Vercel) with no build step, so config.js must ship with
+# the repo. The anon key is meant to be public — RLS protects the data,
+# not this file. If you'd rather generate it at deploy time instead, see
+# DOCUMENTATION.md's "Deploying to Vercel" note and re-add this line.
+# config.js
 
 # Local Environment Overrides
 .env
